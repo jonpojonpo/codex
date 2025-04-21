@@ -2,7 +2,7 @@ import { getBaseUrl, getApiKey } from "./config";
 import OpenAI from "openai";
 
 const MODEL_LIST_TIMEOUT_MS = 2_000; // 2 seconds
-export const RECOMMENDED_MODELS: Array<string> = ["o4-mini", "o3"];
+export const RECOMMENDED_MODELS: Array<string> = ["o4-mini", "o3", "claude-3-7-sonnet-20250219"];
 
 /**
  * Background model loader / cache.
@@ -26,16 +26,32 @@ async function fetchModels(provider: string): Promise<Array<string>> {
     for await (const model of list as AsyncIterable<{ id?: string }>) {
       if (model && typeof model.id === "string") {
         let modelStr = model.id;
-        // fix for gemini
-        if (modelStr.startsWith("models/")) {
+        
+        // Provider-specific model name formatting
+        if (provider === "gemini" && modelStr.startsWith("models/")) {
           modelStr = modelStr.replace("models/", "");
         }
+        
+        // Fix for Anthropic models
+        if (provider === "anthropic" && modelStr.includes("claude")) {
+          // Ensure Claude model IDs are correctly formatted
+          if (!modelStr.startsWith("claude-")) {
+            modelStr = modelStr.replace(/^[^c]+claude-/, "claude-");
+          }
+        }
+
         models.push(modelStr);
       }
     }
 
     return models.sort();
   } catch (error) {
+    // For local providers like LMStudio and Ollama, provide default models if they fail to list
+    if (provider === "lmstudio") {
+      return ["llama3:8b", "llama3:70b", "mistral:7b", "mixtral:8x7b"];
+    } else if (provider === "ollama") {
+      return ["llama3", "mistral", "phi3", "gemma:7b", "codellama:7b"];
+    }
     return [];
   }
 }
@@ -53,6 +69,7 @@ export async function getAvailableModels(
  */
 export async function isModelSupportedForResponses(
   model: string | undefined | null,
+  provider: string = "openai",
 ): Promise<boolean> {
   if (
     typeof model !== "string" ||
@@ -64,7 +81,7 @@ export async function isModelSupportedForResponses(
 
   try {
     const models = await Promise.race<Array<string>>([
-      getAvailableModels("openai"),
+      getAvailableModels(provider),
       new Promise<Array<string>>((resolve) =>
         setTimeout(() => resolve([]), MODEL_LIST_TIMEOUT_MS),
       ),

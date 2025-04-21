@@ -17,10 +17,20 @@ export const providers: Record<
     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
     envKey: "GEMINI_API_KEY",
   },
+  anthropic: {
+    name: "Anthropic",
+    baseURL: "https://api.anthropic.com/v1/openai",
+    envKey: "ANTHROPIC_API_KEY",
+  },
   ollama: {
     name: "Ollama",
     baseURL: "http://localhost:11434/v1",
     envKey: "OLLAMA_API_KEY",
+  },
+  lmstudio: {
+    name: "LMStudio",
+    baseURL: "http://localhost:1234/v1",
+    envKey: "LMSTUDIO_API_KEY",
   },
   mistral: {
     name: "Mistral",
